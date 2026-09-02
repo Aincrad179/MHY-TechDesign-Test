@@ -1,0 +1,3 @@
+﻿# Unity sidecar files — ignore for Cursor AI / indexing only.
+# Do not put *.meta in .gitignore; Unity needs those GUIDs in version control.
+*.meta
