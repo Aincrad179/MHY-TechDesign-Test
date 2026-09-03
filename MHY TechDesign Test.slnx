@@ -80,6 +80,7 @@
   <Project Path="Unity.AI.Toolkit.Asset.csproj" />
   <Project Path="Unity.Collections.CodeGen.csproj" />
   <Project Path="Unity.AI.Assistant.AssetGenerators.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Mathematics.Editor.csproj" />
   <Project Path="Unity.VisualScripting.SettingsProvider.Editor.csproj" />
   <Project Path="UnityEditor.UI.Analytics.csproj" />
@@ -96,7 +97,6 @@
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="Unity.AI.Toolkit.Async.csproj" />
   <Project Path="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.AI.Assistant.Bridge.Editor.csproj" />
   <Project Path="Unity.AI.Toolkit.Compliance.csproj" />
   <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -10,13 +11,83 @@ public abstract class Carrier : MonoBehaviour
     [SerializeField] protected float fuelCapacity = 30f;   // 上限：满燃料是多少
     [SerializeField] protected float burnRate     = 1f;    // 速度：每秒烧掉多少
 
-    public float Fuel;                                     // 现状：现在还剩多少
+    /// <summary>
+    /// 现状：现在还剩多少。
+    ///
+    /// 写成属性而不是公开字段，为的是两件事：
+    ///   1. 它是**运行时值**，不该被序列化进场景。字段版本会被存盘，
+    ///      Inspector 里显示成上次存的数（通常是 0），看着像 bug。
+    ///   2. `protected set` 把"只有载体自己能改自己的 fuel"这条规则
+    ///      从注释升级成编译器约束——Flame 想写也写不进来。
+    ///      留 protected 而非 private，是给后面的 PipeNetwork 这类
+    ///      需要覆写 ConsumeFuel 的子载体留门。
+    /// </summary>
+    public float Fuel { get; protected set; }
 
     /// <summary>火是否正寄居在自己身上。没点燃的载体不该自燃。</summary>
     protected bool isLit;
 
     /// <summary>火应该待的位置。</summary>
     public virtual Vector3 Position => transform.position;
+
+    // ── 我在哪个区域 ────────────────────────────────────────
+    // 由 OxygenZone 在 trigger 进出时写进来（见 OxygenZone 里"为什么是区域检测载体"）。
+    //
+    // 注意这里不判 isLit：区域归属是载体的客观属性，跟点没点燃无关。
+    // 好处是火交接过来的那一帧，新载体的区域已经是现成的正确值，
+    // 不需要写任何交接时的同步代码——和 Fuel 一样，数据放对地方就不用搬。
+    //
+    // 【这个列表故意允许重复】
+    // 一个载体可能挂着多个碰撞体（根节点的 trigger + 杆体的 collider），
+    // 进同一个区域会收到多次 Enter。若在 Enter 时去重，
+    // 那么其中一个碰撞体先离开就会把整条记录删掉，而另一个还在区域里——
+    // 火会莫名其妙地"恢复"。
+    // 允许重复则列表天然成了个计数器：进几次记几笔，出几次删几笔，
+    // 全部出完才真正离开。而"后进入者优先"照旧成立，不需要额外代码。
+    private readonly List<OxygenZone> overlappingZones = new List<OxygenZone>();
+
+    /// <summary>
+    /// 当前所处区域的氧气值。**后进入的区域优先**——
+    /// 走进大房间里的小密室，取小密室；退出来自动回到大房间。
+    /// 一个区域都没覆盖到时用 <see cref="OxygenZone.DefaultOxygen"/> 兜底，
+    /// 保证任何位置都取得到值，Flame 那边不需要判空。
+    /// </summary>
+    public float Oxygen
+    {
+        get
+        {
+            // 倒着找第一个还活着的：区域可能被销毁，Unity 的伪 null 在这里会被跳过
+            for (int i = overlappingZones.Count - 1; i >= 0; i--)
+            {
+                if (overlappingZones[i] != null)
+                {
+                    return overlappingZones[i].Oxygen;
+                }
+            }
+
+            return OxygenZone.DefaultOxygen;
+        }
+    }
+
+    public void EnterZone(OxygenZone zone)
+    {
+        bool isNew = !overlappingZones.Contains(zone);
+        overlappingZones.Add(zone);   // 不去重，见上面的注释
+
+        // 只在第一次真正进入时打日志，第二个碰撞体带来的那笔不刷屏
+        if (isNew)
+        {
+            Debug.Log($"[Zone] {name} 进入 {zone.name}　｜　oxygen {Oxygen:F1}");
+        }
+    }
+
+    public void ExitZone(OxygenZone zone)
+    {
+        if (overlappingZones.Remove(zone) && !overlappingZones.Contains(zone))
+        {
+            Debug.Log($"[Zone] {name} 离开 {zone.name}　｜　oxygen 回到 {Oxygen:F1}");
+        }
+    }
 
     protected virtual void Awake()
     {
