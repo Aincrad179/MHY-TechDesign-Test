@@ -69,6 +69,37 @@ public abstract class Carrier : MonoBehaviour
         }
     }
 
+    /// <summary>满燃料是多少。调试面板和视觉层要拿它算比例。</summary>
+    public float FuelCapacity => fuelCapacity;
+
+    /// <summary>每秒烧多少。</summary>
+    public float BurnRate => burnRate;
+
+    /// <summary>火正寄居在自己身上。</summary>
+    public bool IsLit => isLit;
+
+    /// <summary>
+    /// 说了算的那个区域——也就是最后进入的、还活着的那个。没有则为 null（用兜底值）。
+    /// </summary>
+    public OxygenZone CurrentZone
+    {
+        get
+        {
+            for (int i = overlappingZones.Count - 1; i >= 0; i--)
+            {
+                if (overlappingZones[i] != null) return overlappingZones[i];
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 当前重叠着的所有区域，后进入的排在后面。只读——外面改不了这个栈。
+    /// 调试面板要显示整摞，因为"退出小区域该回到大区域"这类问题
+    /// 只看最终 oxygen 值是看不出来的。
+    /// </summary>
+    public IReadOnlyList<OxygenZone> OverlappingZones => overlappingZones;
+
     public void EnterZone(OxygenZone zone)
     {
         bool isNew = !overlappingZones.Contains(zone);
@@ -77,7 +108,7 @@ public abstract class Carrier : MonoBehaviour
         // 只在第一次真正进入时打日志，第二个碰撞体带来的那笔不刷屏
         if (isNew)
         {
-            Debug.Log($"[Zone] {name} 进入 {zone.name}　｜　oxygen {Oxygen:F1}");
+            if (Flame.ConsoleLog) Debug.Log($"[Zone] {name} 进入 {zone.name}　｜　oxygen {Oxygen:F1}");
         }
     }
 
@@ -85,7 +116,7 @@ public abstract class Carrier : MonoBehaviour
     {
         if (overlappingZones.Remove(zone) && !overlappingZones.Contains(zone))
         {
-            Debug.Log($"[Zone] {name} 离开 {zone.name}　｜　oxygen 回到 {Oxygen:F1}");
+            if (Flame.ConsoleLog) Debug.Log($"[Zone] {name} 离开 {zone.name}　｜　oxygen 回到 {Oxygen:F1}");
         }
     }
 
